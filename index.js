@@ -55,6 +55,58 @@ function rotate_xz({ x, y, z }, angle) {
   };
 }
 
+function rotate_xy({ x, y, z }, angle) {
+  return {
+    x: x * Math.cos(angle) - y * Math.sin(angle),
+    y: x * Math.sin(angle) + y * Math.cos(angle),
+    z
+  };
+}
+
+function rotate_yz({ x, y, z }, angle) {
+  return {
+    x,
+    y: y * Math.cos(angle) - z * Math.sin(angle),
+    z: y * Math.sin(angle) + z * Math.cos(angle)
+  };
+}
+
+// Rotate cube so its space diagonal aligns with Y axis
+// This makes the cube "stand" on one corner with opposite corner directly above
+//
+// Geometry explanation:
+// - Space diagonal goes from corner (-1,-1,-1) to (1,1,1)
+// - Goal: align this diagonal with Y axis so top/bottom corners stay still when rotating around Y
+//
+// Step 1: rotate_xy by 45° (around Z axis)
+//   - Eliminates X component of diagonal
+//   - (1,1,1) → (0, √2, 1)
+//
+// Step 2: rotate_yz by arcsin(1/√3) ≈ 35.26° (around X axis)
+//   - Eliminates Z component, aligns with Y axis
+//   - (0, √2, 1) → (0, √3, 0)
+//
+// Why 35.26° instead of 45°?
+//   After step 1, in YZ plane we have point (y=√2, z=1)
+//
+//       Y
+//       |
+//  √2 __|___*  (y=√2 ≈ 1.41)
+//       |  /
+//       | / 35.26°  ← angle = arctan(1/√2), NOT 45°
+//     __|/______Z
+//       |   1
+//
+function rotate_points(points) {
+  const angle_xy = Math.PI / 4;
+  const angle_yz = Math.atan(1 / Math.sqrt(2));
+
+  for (let i = 0; i < points.length; i++) {
+    points[i] = rotate_xy(points[i], angle_xy);
+    points[i] = rotate_yz(points[i], angle_yz);
+  }
+}
+
 const vs = [
   { x: 0.25, y: 0.25, z: 0.25 },
   { x: -0.25, y: 0.25, z: 0.25 },
@@ -65,6 +117,8 @@ const vs = [
   { x: -0.25, y: -0.25, z: -0.25 },
   { x: 0.25, y: -0.25, z: -0.25 },
 ];
+
+rotate_points(vs);
 
 const fs = [
   [0, 1, 2, 3],
@@ -82,7 +136,7 @@ let angle = 0;
 function frame() {
   const dt = 1 / FPS;
   // dz += 1 * dt;
-  angle += 2 * Math.PI * dt;
+  angle += Math.PI * dt;
   clear();
   // for (const v of vs) {
   //  point(map_canvus_size(project(translate_z(rotate_xz(v, angle), dz))));
